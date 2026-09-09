@@ -4,8 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "npm --prefix frontend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev:backend": "npm --prefix backend run dev",
     "build": "npm --prefix frontend run build",
+    "build:all": "npm --prefix backend run build && npm --prefix frontend run build",
     "start": "npm --prefix frontend run start",
-    "lint": "npm --prefix frontend run lint"
+    "lint": "npm --prefix frontend run lint",
+    "test:backend": "npm --prefix backend test"
   }
 }
