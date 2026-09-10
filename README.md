@@ -37,5 +37,6 @@ CI runs the same checks for every pull request and push to `main`.
 - Run `npm run build:all`, `npm run lint`, and `npm run test:backend` before promotion.
 - Enable database backups, log retention/alerts, TLS, and secret rotation in the hosting platform.
 - Create the first administrator with the seed command, then remove seed credentials from the environment.
+- The production backend start command synchronizes MongoDB indexes before accepting traffic. Run `npm --prefix backend run db:sync-indexes` explicitly when your hosting platform separates release and web processes.
 
 The frontend defaults to `http://localhost:3000`; the API uses the `PORT` configured in `backend/.env`.
