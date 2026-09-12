@@ -9,3 +9,5 @@ export const hotelConfig = {
   googleMapsUrl: "https://maps.app.goo.gl/bR84NVWXtLndHjhn7",
   mapEmbedUrl: "https://www.google.com/maps?q=27.830269,85.4490004&z=16&output=embed",
 } as const;
+
+export const availabilityNotice = "Room details and availability are subject to confirmation by Hotel Mount Bliss.";

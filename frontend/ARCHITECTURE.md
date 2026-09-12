@@ -5,7 +5,6 @@
 - `components/layout/` — public website shells, header, and footer.
 - `components/hotel/` — shared hotel-specific presentation.
 - `components/rooms/`, `booking/`, `dashboard/`, `admin/`, `auth/` — feature components grouped by domain.
-- `data/` — temporary local records used until the backend is connected.
 - `services/` — the only modules that call the centralized HTTP client.
 - `lib/` — framework-independent utilities and API configuration.
 - `constants/` — stable configuration and status mappings.

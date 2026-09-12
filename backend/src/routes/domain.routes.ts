@@ -2,7 +2,6 @@ import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import { Router, type Request } from "express";
 import rateLimit from "express-rate-limit";
-import { isValidObjectId } from "mongoose";
 import { z } from "zod";
 import { authorize, authenticate, optionalAuthenticate } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
@@ -12,19 +11,12 @@ import { User } from "../models/user.model.js";
 import { AppError } from "../utils/app-error.js";
 import { asyncHandler } from "../utils/async-handler.js";
 import { success } from "../utils/response.js";
+import { idSchema, objectId, paged } from "./shared/route-utils.js";
 
 const router = Router();
 const staff = authorize("RECEPTIONIST", "MANAGER", "ADMIN");
 const managers = authorize("MANAGER", "ADMIN");
 const guestBookingSensitive = rateLimit({ windowMs: 15 * 60_000, limit: 20, standardHeaders: "draft-8", legacyHeaders: false });
-const objectId = z.string().refine(isValidObjectId, "Invalid identifier");
-const idSchema = z.object({ params: z.object({ id: objectId }) });
-const pageInfo = (req: Request) => ({ page: Math.max(1, Number(req.query.page) || 1), pageSize: Math.min(100, Math.max(1, Number(req.query.pageSize) || 20)) });
-const paged = async (model: any, filter: object, req: Request, populate?: string) => {
-  const { page, pageSize } = pageInfo(req); let query = model.find(filter).sort({ createdAt: -1 }).skip((page - 1) * pageSize).limit(pageSize);
-  if (populate) query = query.populate(populate); const [items, total] = await Promise.all([query.lean(), model.countDocuments(filter)]);
-  return { items, page, pageSize, total, totalPages: Math.ceil(total / pageSize) };
-};
 const ownsOrStaff = (req: Request, owner: unknown) => String(owner) === req.auth!.userId || req.auth!.role !== "CUSTOMER";
 const notify = (user: unknown, title: string, message: string, type = "INFO") => Notification.create({ user, title, message, type });
 const notifyCustomer = async (user: unknown, preference: "bookingUpdates" | "serviceUpdates", title: string, message: string, type = "INFO") => {
