@@ -10,6 +10,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { toast } from "@/components/ui/toast";
 import { authApi } from "@/services/auth-api";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -114,12 +115,7 @@ export function AuthForm({ mode, checkCurrentUser = true }: { mode: AuthMode; ch
     return (
       <label className="grid gap-1.5 text-sm font-semibold">
         {label}
-        <Input
-          type={type}
-          autoComplete={autoComplete}
-          aria-invalid={Boolean(errors[name])}
-          {...register(name)}
-        />
+        {type === "password" ? <PasswordInput autoComplete={autoComplete} aria-invalid={Boolean(errors[name])} {...register(name)} /> : <Input type={type} autoComplete={autoComplete} aria-invalid={Boolean(errors[name])} {...register(name)} />}
         {errors[name] && (
           <span className="text-xs font-normal text-destructive">
             {errors[name]?.message}
