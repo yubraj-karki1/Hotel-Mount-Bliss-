@@ -1,0 +1,2 @@
+import { AvailabilityNotice as AvailabilityNotice } from "@/components/hotel/availability-notice";
+export function PageHeading({title,description,action}:{title:string;description:string;action?:React.ReactNode}) { return <><div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><h1 className="font-serif text-4xl text-primary">{title}</h1><p className="mt-2 text-sm text-muted-foreground">{description}</p></div>{action}</div><div className="mt-6"><AvailabilityNotice /></div></>; }

@@ -1,0 +1,17 @@
+import { Router } from "express";
+import rateLimit from "express-rate-limit";
+import { authController } from "../controllers/auth.controller.js";
+import { authenticate } from "../middleware/auth.js";
+import { validate } from "../middleware/validate.js";
+import { asyncHandler } from "../utils/async-handler.js";
+import { changePasswordSchema, forgotPasswordSchema, loginSchema, resetPasswordSchema, updateProfileSchema } from "../validators/auth.validator.js";
+const router = Router();
+const sensitive = rateLimit({ windowMs: 15 * 60_000, limit: 10, standardHeaders: "draft-8", legacyHeaders: false });
+router.post("/login", sensitive, validate(loginSchema), asyncHandler(authController.login));
+router.post("/logout", authenticate, asyncHandler(authController.logout));
+router.get("/me", authenticate, asyncHandler(authController.me));
+router.patch("/me", authenticate, validate(updateProfileSchema), asyncHandler(authController.updateProfile));
+router.post("/forgot-password", sensitive, validate(forgotPasswordSchema), asyncHandler(authController.forgotPassword));
+router.post("/reset-password", sensitive, validate(resetPasswordSchema), asyncHandler(authController.resetPassword));
+router.post("/change-password", authenticate, validate(changePasswordSchema), asyncHandler(authController.changePassword));
+export default router;

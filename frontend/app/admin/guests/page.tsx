@@ -1,0 +1,1 @@
+import { ApiResourcePage } from "@/components/admin/api-resource-page";export default function Page(){return <ApiResourcePage title="Guests" description="Registered guest accounts." endpoint="/admin/guests" fields={[{key:"name",label:"Guest"},{key:"email",label:"Email"},{key:"phone",label:"Phone"},{key:"createdAt",label:"Joined"},{key:"isActive",label:"Active"}]}/>}

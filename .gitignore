@@ -3,6 +3,6 @@ dist/
 .env
 *.log
 coverage/
+.git-disabled/
 backend/uploads/*
 !backend/uploads/.gitkeep
-

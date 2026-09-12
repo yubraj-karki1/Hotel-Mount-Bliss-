@@ -1,0 +1,3 @@
+import { apiClient } from "@/lib/api";
+import type { Envelope, Paged, Room } from "@/types/domain";
+export const roomApi = { list: (params?: Record<string, string | number>) => apiClient.get<Envelope<Paged<Room>>>("/rooms", { params }), detail: (id: string) => apiClient.get<Envelope<Room>>(`/rooms/${id}`), alternatives: (id:string, params:{checkIn:string;checkOut:string;guests:number}) => apiClient.get<Envelope<Room[]>>(`/rooms/${id}/alternatives`,{params}), create: (payload: Omit<Room, "_id">) => apiClient.post<Envelope<Room>>("/rooms", payload), update: (id: string, payload: Partial<Room>) => apiClient.patch<Envelope<Room>>(`/rooms/${id}`, payload), remove: (id: string) => apiClient.delete(`/rooms/${id}`) };

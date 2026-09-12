@@ -1,0 +1,25 @@
+@import "tailwindcss";
+:root {
+  --background: #fbfaf6; --foreground: #202724; --card: #ffffff; --card-foreground: #202724;
+  --popover: #ffffff; --popover-foreground: #202724; --primary: #153c32; --primary-foreground: #fffdf7;
+  --secondary: #e8eee9; --secondary-foreground: #153c32; --muted: #f1f0e9; --muted-foreground: #68736e;
+  --accent: #b39255; --accent-foreground: #201b12; --destructive: #a93d36; --destructive-foreground: #fffafa;
+  --success: #397357; --warning: #a66b22; --border: #dedfd8; --input: #d7dad4; --ring: #2a6354;
+  --mountain: #466b7a; --radius: 0.75rem; --shadow-soft: 0 10px 35px -18px rgb(27 51 43 / 0.22);
+}
+@theme inline {
+  --color-background: var(--background); --color-foreground: var(--foreground); --color-card: var(--card); --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover); --color-popover-foreground: var(--popover-foreground); --color-primary: var(--primary); --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary); --color-secondary-foreground: var(--secondary-foreground); --color-muted: var(--muted); --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent); --color-accent-foreground: var(--accent-foreground); --color-destructive: var(--destructive); --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success); --color-warning: var(--warning); --color-border: var(--border); --color-input: var(--input); --color-ring: var(--ring); --color-mountain: var(--mountain);
+  --font-sans: var(--font-manrope); --font-serif: var(--font-playfair); --shadow-soft: var(--shadow-soft);
+}
+* { border-color: var(--border); }
+html { scroll-behavior: smooth; }
+body { background: var(--background); color: var(--foreground); font-family: var(--font-manrope), sans-serif; text-rendering: optimizeLegibility; }
+::selection { background: color-mix(in srgb, var(--accent) 32%, transparent); }
+:focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
+@keyframes fade-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.animate-fade-up { animation: fade-up 500ms ease-out both; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }

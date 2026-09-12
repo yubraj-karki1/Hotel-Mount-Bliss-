@@ -1,0 +1,1 @@
+import { SectionPage } from "@/components/hotel/section-page";export default function Page(){return <SectionPage eyebrow="Authentication required" title="Please sign in to continue" description="This area is available to authenticated Hotel Mount Bliss guests."/>}

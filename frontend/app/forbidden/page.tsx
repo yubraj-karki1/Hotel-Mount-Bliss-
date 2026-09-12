@@ -1,0 +1,1 @@
+import { SectionPage } from "@/components/hotel/section-page";export default function Page(){return <SectionPage eyebrow="Access denied" title="You do not have permission" description="Your account role cannot access this page. Backend authorization remains authoritative."/>}

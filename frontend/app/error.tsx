@@ -1,0 +1,2 @@
+"use client";import { Button } from "@/components/ui/button";
+export default function ErrorPage({reset}:{error:Error&{digest?:string};reset:()=>void}){return <main className="grid min-h-screen place-items-center px-5 text-center"><div><p className="text-xs font-bold uppercase tracking-[.3em] text-destructive">Something went wrong</p><h1 className="mt-3 font-serif text-5xl text-primary">We could not load this page</h1><p className="mt-4 text-muted-foreground">Check your connection and try again.</p><Button className="mt-7" onClick={reset}>Try again</Button></div></main>}
