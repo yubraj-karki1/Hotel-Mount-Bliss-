@@ -15,4 +15,14 @@ describe("authentication validation", () => {
   it("rejects malformed login email addresses", () => {
     expect(loginSchema.safeParse({ body: { email: "invalid", password: "anything" } }).success).toBe(false);
   });
+
+  it("defaults login persistence to a browser session", () => {
+    const result = loginSchema.parse({ body: { email: "guest@example.com", password: "anything" } });
+    expect(result.body.rememberMe).toBe(false);
+  });
+
+  it("accepts an explicit remembered login", () => {
+    const result = loginSchema.parse({ body: { email: "guest@example.com", password: "anything", rememberMe: true } });
+    expect(result.body.rememberMe).toBe(true);
+  });
 });

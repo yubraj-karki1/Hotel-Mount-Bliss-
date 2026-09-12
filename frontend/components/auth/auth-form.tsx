@@ -24,6 +24,7 @@ const authSchema = z.object({
     .regex(/[A-Z]/, "Include an uppercase letter")
     .regex(/\d/, "Include a number"),
   confirmPassword: z.string().optional(),
+  rememberMe: z.boolean().optional(),
 });
 
 type AuthFormValues = z.infer<typeof authSchema>;
@@ -81,6 +82,7 @@ export function AuthForm({ mode, checkCurrentUser = true }: { mode: AuthMode; ch
         const response = await authApi.login({
           email: values.email,
           password: values.password,
+          rememberMe: values.rememberMe ?? false,
         }); role = response.data.data.user.role;
       }
 
@@ -140,7 +142,7 @@ export function AuthForm({ mode, checkCurrentUser = true }: { mode: AuthMode; ch
       {!isRegistering && (
         <div className="flex items-center justify-between text-sm">
           <label className="flex items-center gap-2">
-            <input type="checkbox" className="size-4 accent-primary" /> Remember me
+            <input type="checkbox" className="size-4 accent-primary" {...register("rememberMe")} /> Remember me for 30 days
           </label>
           <Link href="/forgot-password" className="font-semibold text-primary hover:underline">
             Forgot password?

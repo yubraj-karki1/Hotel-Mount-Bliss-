@@ -3,6 +3,7 @@ import { apiClient } from "@/lib/api";
 export type LoginDetails = {
   email: string;
   password: string;
+  rememberMe?: boolean;
 };
 
 export type RegistrationDetails = LoginDetails & {

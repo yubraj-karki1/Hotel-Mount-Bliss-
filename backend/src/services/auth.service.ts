@@ -7,7 +7,7 @@ import { AppError } from "../utils/app-error.js";
 import { emailService } from "./email.service.js";
 
 const publicUser = (user: UserDocument & { _id?: unknown }) => ({ id: String(user._id), name: user.name, email: user.email, phone: user.phone, profileImage: user.profileImage ?? null, role: user.role, isEmailVerified: user.isEmailVerified, lastLogin: user.lastLogin ?? null, createdAt: user.createdAt, preferences: user.preferences });
-const signToken = (user: UserDocument & { _id?: unknown }) => jwt.sign({ role: user.role }, env.JWT_SECRET, { subject: String(user._id), expiresIn: env.JWT_EXPIRES_IN as NonNullable<SignOptions["expiresIn"]> });
+const signToken = (user: UserDocument & { _id?: unknown }, expiresIn: NonNullable<SignOptions["expiresIn"]> = env.JWT_EXPIRES_IN as NonNullable<SignOptions["expiresIn"]>) => jwt.sign({ role: user.role }, env.JWT_SECRET, { subject: String(user._id), expiresIn });
 
 export const authService = {
   async register(input: { name: string; email: string; phone: string; password: string }) {
@@ -15,11 +15,11 @@ export const authService = {
     const user = await User.create({ ...input, password: await bcrypt.hash(input.password, 12) });
     return { user: publicUser(user), accessToken: signToken(user) };
   },
-  async login(input: { email: string; password: string }) {
+  async login(input: { email: string; password: string; rememberMe?: boolean }) {
     const user = await User.findOne({ email: input.email }).select("+password");
     if (!user || !user.isActive || !(await bcrypt.compare(input.password, user.password))) throw new AppError(401, "Invalid email or password");
     user.lastLogin = new Date(); await user.save();
-    return { user: publicUser(user), accessToken: signToken(user) };
+    return { user: publicUser(user), accessToken: signToken(user, input.rememberMe ? "30d" : env.JWT_EXPIRES_IN as NonNullable<SignOptions["expiresIn"]>) };
   },
   async me(userId: string) {
     const user = await User.findById(userId);
