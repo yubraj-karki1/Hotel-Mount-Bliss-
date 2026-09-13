@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Sparkles } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
+import axios from "axios";
 import { bookingApi } from "@/services/booking-api";
 import { roomApi } from "@/services/room-api";
 import { serviceApi } from "@/services/service-api";
@@ -29,7 +30,7 @@ export function BookingFlow() {
   const valid = stayReady && contactReady;
   const alternatives = useQuery({ queryKey: ["room-alternatives", form.roomId, form.checkIn, form.checkOut, form.guests], enabled: stayReady, queryFn: async () => (await roomApi.alternatives(form.roomId, { checkIn: form.checkIn, checkOut: form.checkOut, guests: form.guests })).data.data });
   const quote = useMutation({ mutationFn: () => bookingApi.quote(form) });
-  const create = useMutation({ mutationFn: () => bookingApi.create(form), onSuccess: response => { setCreated(response.data.data); client.invalidateQueries({ queryKey: ["rooms"] }); toast.success("Booking submitted"); }, onError: () => { client.invalidateQueries({ queryKey: ["rooms"] }); toast.error("This room is already booked or unavailable."); } });
+  const create = useMutation({ mutationFn: () => bookingApi.create(form), onSuccess: response => { setCreated(response.data.data); client.invalidateQueries({ queryKey: ["rooms"] }); toast.success("Booking submitted"); }, onError: error => { client.invalidateQueries({ queryKey: ["rooms"] }); const message = axios.isAxiosError<{ message?: string }>(error) ? error.response?.data?.message : undefined; toast.error(message ?? "Booking could not be submitted. Please try again."); } });
   const waitlist = useMutation({ mutationFn: () => bookingApi.joinWaitlist({ roomId: form.roomId, checkIn: form.checkIn, checkOut: form.checkOut, guests: form.guests, name: form.guestName, email: form.guestEmail, phone: form.guestPhone }), onSuccess: () => { setWaitlisted(true); toast.success("You joined the waitlist"); }, onError: () => toast.error("Could not join the waitlist. You may already be listed or the room is available.") });
   const update = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => { setForm(current => ({ ...current, [key]: value })); quote.reset(); setWaitlisted(false); };
   const toggleAddOn = (id: string) => update("addOnIds", form.addOnIds.includes(id) ? form.addOnIds.filter(value => value !== id) : [...form.addOnIds, id]);

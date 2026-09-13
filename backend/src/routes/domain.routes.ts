@@ -120,7 +120,28 @@ router.post("/waitlist", guestBookingSensitive, validate(z.object({ body: waitli
   const entry = await WaitlistEntry.create({ room: room._id, ...req.body, roomId: undefined });
   return success(res, 201, "You have joined the waitlist", { id: entry._id, status: entry.status });
 }));
-async function quoteBooking(input: z.infer<typeof bookingInput>) { const room = await Room.findOne({ _id: input.roomId, isActive: true, status: { $nin: ["MAINTENANCE", "OUT_OF_SERVICE"] } }); if (!room) throw new AppError(409, "Room is operationally unavailable"); if (input.guests > Number(room.capacity)) throw new AppError(422, "Guest count exceeds room capacity"); const conflict = await Booking.exists({ room: room._id, status: { $nin: ["CANCELLED", "CHECKED_OUT"] }, checkIn: { $lt: input.checkOut }, checkOut: { $gt: input.checkIn } }); if (conflict) throw new AppError(409, "Room is unavailable for those dates"); const nights = Math.ceil((input.checkOut.getTime() - input.checkIn.getTime()) / 86_400_000); const uniqueIds = [...new Set(input.addOnIds)]; const services = uniqueIds.length ? await HotelService.find({ _id: { $in: uniqueIds }, isActive: true }) : []; if (services.length !== uniqueIds.length) throw new AppError(422, "One or more selected add-ons are unavailable"); const addOns = services.map(service => ({ service: service._id, name: service.name, unitPrice: Number(service.price), quantity: 1, total: Number(service.price) })); const roomTotal = nights * Number(room.price); const addOnTotal = addOns.reduce((sum, item) => sum + item.total, 0); return { room, nights, roomTotal, addOnTotal, addOns, totalAmount: roomTotal + addOnTotal }; }
+async function quoteBooking(input: z.infer<typeof bookingInput>) {
+  // Normalize at the service boundary as well as in validation. Requests arrive as
+  // JSON strings, and this keeps date arithmetic safe if the function is reused.
+  const checkIn = new Date(input.checkIn);
+  const checkOut = new Date(input.checkOut);
+  if (!Number.isFinite(checkIn.getTime()) || !Number.isFinite(checkOut.getTime()) || checkOut <= checkIn) {
+    throw new AppError(422, "Enter a valid check-in and check-out range");
+  }
+  const room = await Room.findOne({ _id: input.roomId, isActive: true, status: { $nin: ["MAINTENANCE", "OUT_OF_SERVICE"] } });
+  if (!room) throw new AppError(409, "Room is operationally unavailable");
+  if (input.guests > Number(room.capacity)) throw new AppError(422, "Guest count exceeds room capacity");
+  const conflict = await Booking.exists({ room: room._id, status: { $nin: ["CANCELLED", "CHECKED_OUT"] }, checkIn: { $lt: checkOut }, checkOut: { $gt: checkIn } });
+  if (conflict) throw new AppError(409, "Room is unavailable for those dates");
+  const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / 86_400_000);
+  const uniqueIds = [...new Set(input.addOnIds)];
+  const services = uniqueIds.length ? await HotelService.find({ _id: { $in: uniqueIds }, isActive: true }) : [];
+  if (services.length !== uniqueIds.length) throw new AppError(422, "One or more selected add-ons are unavailable");
+  const addOns = services.map(service => ({ service: service._id, name: service.name, unitPrice: Number(service.price), quantity: 1, total: Number(service.price) }));
+  const roomTotal = nights * Number(room.price);
+  const addOnTotal = addOns.reduce((sum, item) => sum + item.total, 0);
+  return { room, nights, roomTotal, addOnTotal, addOns, totalAmount: roomTotal + addOnTotal };
+}
 router.post("/bookings/quote", validate(z.object({ body: bookingInput })), asyncHandler(async (req, res) => { const value = await quoteBooking(req.body); return success(res, 200, "Booking quote calculated", { room: value.room, nights: value.nights, roomTotal: value.roomTotal, addOnTotal: value.addOnTotal, totalAmount: value.totalAmount }); }));
 router.post("/bookings", optionalAuthenticate, validate(z.object({ body: bookingInput })), asyncHandler(async (req, res) => {
   const now = new Date(); const lockUntil = new Date(now.getTime() + 15_000);
