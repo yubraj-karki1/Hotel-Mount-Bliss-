@@ -14,6 +14,7 @@ import apiRoutes from "./routes/index.js";
 import { AppError } from "./utils/app-error.js";
 export const app = express();
 const allowedOrigins = new Set(env.CLIENT_URL.split(",").map((value) => value.trim().replace(/\/$/, "")));
+const vercelProjectOrigin = /^https:\/\/hotel-mount-bliss(?:-[a-z0-9-]+)*\.vercel\.app$/i;
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
 app.use(pinoHttp({ logger, genReqId: (req, res) => {
@@ -25,7 +26,7 @@ app.use(pinoHttp({ logger, genReqId: (req, res) => {
 app.use(helmet());
 app.use(cors({
   origin(origin, callback) {
-    if (!origin || allowedOrigins.has(origin.replace(/\/$/, ""))) return callback(null, true);
+    if (!origin || allowedOrigins.has(origin.replace(/\/$/, "")) || vercelProjectOrigin.test(origin)) return callback(null, true);
     return callback(new AppError(403, "Origin is not allowed"));
   },
   credentials: true,

@@ -22,5 +22,17 @@ const userSchema = new Schema<UserDocument>({
   passwordResetExpires: { type: Date, select: false },
   favorites: [{ type: Schema.Types.ObjectId, ref: "Room" }],
   preferences: { bookingUpdates: { type: Boolean, default: true }, serviceUpdates: { type: Boolean, default: true } },
-}, { timestamps: true, versionKey: false });
+}, {
+  timestamps: true,
+  versionKey: false,
+  toJSON: {
+    transform: (_document, result) => {
+      const sanitized = result as Record<string, unknown>;
+      delete sanitized.password;
+      delete sanitized.passwordResetToken;
+      delete sanitized.passwordResetExpires;
+      return result;
+    },
+  },
+});
 export const User = model<UserDocument>("User", userSchema);
