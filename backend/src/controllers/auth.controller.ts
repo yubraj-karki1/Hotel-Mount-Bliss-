@@ -5,8 +5,9 @@ import { authService } from "../services/auth.service.js";
 import { success } from "../utils/response.js";
 
 const durationMs = (value: string) => { const match = /^(\d+)([smhd])$/.exec(value)!; const units = { s: 1_000, m: 60_000, h: 3_600_000, d: 86_400_000 }; return Number(match[1]) * units[match[2] as keyof typeof units]; };
-const cookieOptions = (rememberMe = false) => ({ httpOnly: true, secure: env.NODE_ENV === "production", sameSite: "lax" as const, ...(rememberMe ? { maxAge: durationMs("30d") } : {}), path: "/" });
-const clearCookieOptions = { httpOnly: true, secure: env.NODE_ENV === "production", sameSite: "lax" as const, path: "/" };
+const productionCookie = env.NODE_ENV === "production";
+const cookieOptions = (rememberMe = false) => ({ httpOnly: true, secure: productionCookie, sameSite: productionCookie ? "none" as const : "lax" as const, ...(rememberMe ? { maxAge: durationMs("30d") } : {}), path: "/" });
+const clearCookieOptions = { httpOnly: true, secure: productionCookie, sameSite: productionCookie ? "none" as const : "lax" as const, path: "/" };
 const context = (req: Request) => ({ ipAddress: req.ip, userAgent: req.get("user-agent") });
 export const authController = {
   register: async (req: Request, res: Response) => { const result = await authService.register(req.body); res.cookie("accessToken", result.accessToken, cookieOptions()); await auditService.record({ user: result.user.id, action: "REGISTER", resource: "User", resourceId: result.user.id, description: "Customer account registered", ...context(req) }); return success(res, 201, "Account created successfully", { user: result.user }); },
