@@ -1,5 +1,8 @@
 import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 import bcrypt from "bcryptjs";
+import multer from "multer";
 import { Router, type Request } from "express";
 import rateLimit from "express-rate-limit";
 import { z } from "zod";
@@ -16,6 +19,28 @@ import { idSchema, objectId, paged } from "./shared/route-utils.js";
 const router = Router();
 const staff = authorize("RECEPTIONIST", "MANAGER", "ADMIN");
 const managers = authorize("MANAGER", "ADMIN");
+const roomPhotoDirectory = path.resolve(process.cwd(), "uploads", "room-photos");
+fs.mkdirSync(roomPhotoDirectory, { recursive: true });
+const acceptedPhotoTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+const photoExtension: Record<string, string> = { "image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp" };
+const roomPhotoUpload = multer({
+  storage: multer.diskStorage({
+    destination: roomPhotoDirectory,
+    filename: (_req, file, callback) => callback(null, `${crypto.randomUUID()}${photoExtension[file.mimetype] ?? ""}`),
+  }),
+  limits: { fileSize: 5 * 1024 * 1024, files: 8 },
+  fileFilter: (_req, file, callback) => {
+    if (!acceptedPhotoTypes.has(file.mimetype)) return callback(new AppError(422, "Room photos must be JPEG, PNG, or WebP images."));
+    return callback(null, true);
+  },
+});
+const hasValidImageSignature = (file: Express.Multer.File) => {
+  const buffer = Buffer.alloc(12); const descriptor = fs.openSync(file.path, "r");
+  try { fs.readSync(descriptor, buffer, 0, buffer.length, 0); } finally { fs.closeSync(descriptor); }
+  if (file.mimetype === "image/jpeg") return buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+  if (file.mimetype === "image/png") return buffer.subarray(0, 8).equals(Buffer.from([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a]));
+  return file.mimetype === "image/webp" && buffer.subarray(0, 4).toString() === "RIFF" && buffer.subarray(8, 12).toString() === "WEBP";
+};
 const guestBookingSensitive = rateLimit({ windowMs: 15 * 60_000, limit: 20, standardHeaders: "draft-8", legacyHeaders: false });
 const ownsOrStaff = (req: Request, owner: unknown) => String(owner) === req.auth!.userId || req.auth!.role !== "CUSTOMER";
 const notify = (user: unknown, title: string, message: string, type = "INFO") => Notification.create({ user, title, message, type });
@@ -45,7 +70,8 @@ const releaseCancelledRoom = async (booking: { room: unknown; checkIn: Date; che
   await alertWaitlist(booking.room, booking.checkIn, booking.checkOut);
 };
 
-const roomInput = z.object({ name: z.string().trim().min(2).max(100), type: z.string().trim().min(2).max(60), description: z.string().max(3000).default(""), capacity: z.coerce.number().int().min(1).max(20), bed: z.string().trim().min(2).max(100), price: z.coerce.number().min(0), status: z.enum(["AVAILABLE", "RESERVED", "OCCUPIED", "CLEANING", "MAINTENANCE", "OUT_OF_SERVICE"]).default("AVAILABLE"), amenities: z.array(z.string().trim().min(1)).default([]), images: z.array(z.url()).default([]), floor: z.coerce.number().int(), isActive: z.boolean().default(true) });
+const storedRoomPhoto = z.string().regex(/^\/uploads\/room-photos\/[0-9a-f-]+\.(?:jpg|png|webp)$/i, "Upload room photos before creating the room");
+export const roomInput = z.object({ name: z.string().trim().min(2).max(100), type: z.string().trim().min(2).max(60), description: z.string().max(3000).default(""), capacity: z.coerce.number().int().min(1).max(20), bed: z.string().trim().min(2).max(100), price: z.coerce.number().min(0), status: z.enum(["AVAILABLE", "RESERVED", "OCCUPIED", "CLEANING", "MAINTENANCE", "OUT_OF_SERVICE"]).default("AVAILABLE"), amenities: z.array(z.string().trim().min(1)).default([]), images: z.array(storedRoomPhoto).min(1, "Please upload at least one room photo.").max(8), floor: z.coerce.number().int(), isActive: z.boolean().default(true) });
 router.get("/rooms", asyncHandler(async (req, res) => {
   const filter: Record<string, unknown> = { isActive: true };
   if (req.query.type && req.query.type !== "any") filter.type = { $regex: `^${String(req.query.type).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" };
@@ -69,7 +95,18 @@ router.get("/rooms/:id/alternatives", validate(stayQuery), asyncHandler(async (r
   return success(res, 200, "Alternative rooms fetched", rooms);
 }));
 router.get("/settings/public", asyncHandler(async (_req, res) => success(res, 200, "Hotel settings fetched", await HotelSettings.findOne({ key: "primary" }).lean())));
-router.post("/rooms", authenticate, managers, validate(z.object({ body: roomInput })), asyncHandler(async (req, res) => success(res, 201, "Room created", await Room.create(req.body))));
+router.post("/rooms/photos", authenticate, managers, roomPhotoUpload.array("photos", 8), asyncHandler(async (req, res) => {
+  const files = (req.files as Express.Multer.File[] | undefined) ?? [];
+  if (!files.length) throw new AppError(422, "Please upload at least one room photo.");
+  const invalid = files.filter(file => !hasValidImageSignature(file));
+  if (invalid.length) { await Promise.all(files.map(file => fs.promises.unlink(file.path).catch(() => undefined))); throw new AppError(422, "One or more files are not valid room images."); }
+  return success(res, 201, "Room photos uploaded", files.map(file => `/uploads/room-photos/${file.filename}`));
+}));
+router.post("/rooms", authenticate, managers, validate(z.object({ body: roomInput })), asyncHandler(async (req, res) => {
+  const missing = req.body.images.some((image: string) => !fs.existsSync(path.join(process.cwd(), image.replace(/^\//, ""))));
+  if (missing) throw new AppError(422, "One or more uploaded room photos are unavailable.");
+  return success(res, 201, "Room created", await Room.create(req.body));
+}));
 router.patch("/rooms/:id", authenticate, staff, validate(z.object({ params: z.object({ id: objectId }), body: roomInput.partial() })), asyncHandler(async (req, res) => { const room = await Room.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true }); if (!room) throw new AppError(404, "Room not found"); if (req.body.status === "AVAILABLE") await alertWaitlist(room._id); return success(res, 200, "Room updated", room); }));
 router.delete("/rooms/:id", authenticate, managers, validate(idSchema), asyncHandler(async (req, res) => { const room = await Room.findByIdAndUpdate(req.params.id, { isActive: false }, { new: true }); if (!room) throw new AppError(404, "Room not found"); return success(res, 200, "Room archived", room); }));
 

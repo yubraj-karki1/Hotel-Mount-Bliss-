@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { BedDouble, Check, Users } from "lucide-react";
@@ -10,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
+import { roomImageUrl } from "@/lib/room-image";
 
 export default function RoomDetails() {
   const id = String(useParams().id);
@@ -22,7 +24,9 @@ export default function RoomDetails() {
   return <SiteShell><section className="mx-auto max-w-7xl px-5 py-12 lg:px-8">
     <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
       <div>
-        <div className="grid aspect-[16/9] place-items-center rounded-2xl bg-secondary"><BedDouble className="size-24 opacity-25" /></div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {room.images.map((photo, index) => <div key={photo} className={`relative overflow-hidden rounded-2xl bg-secondary ${index === 0 ? "aspect-[16/9] sm:col-span-2" : "aspect-[4/3]"}`}><Image src={roomImageUrl(photo)} alt={`${room.name} photo ${index + 1}`} fill unoptimized priority={index === 0} sizes={index === 0 ? "(min-width: 1024px) 800px, 100vw" : "(min-width: 640px) 400px, 100vw"} className="object-cover" /></div>)}
+        </div>
         <Badge className="mt-8" variant={available ? "accent" : "destructive"}>{available ? room.type : "Booked"}</Badge>
         <h1 className="mt-3 font-serif text-5xl text-primary">{room.name}</h1>
         <p className="mt-6 leading-8 text-muted-foreground">{room.description}</p>

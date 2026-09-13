@@ -23,6 +23,8 @@ EMAIL_PASSWORD=...
 
 Configure the platform health check to request `/health/ready`. Use a managed MongoDB deployment with TLS, backups, monitoring, and restricted network access.
 
+Mount persistent storage at `/app/uploads` for room photos. The backend serves these files from `/uploads`; without a persistent volume, photos will be lost when a container is replaced.
+
 Create the initial administrator once by temporarily adding `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`, and `SEED_ADMIN_PHONE`, running `npm run seed`, and then removing those variables.
 
 ## Frontend

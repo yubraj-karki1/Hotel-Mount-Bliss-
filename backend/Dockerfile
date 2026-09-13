@@ -12,6 +12,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=build /app/dist ./dist
+RUN mkdir -p /app/uploads/room-photos && chown -R node:node /app/uploads
 USER node
 EXPOSE 5000
 CMD ["npm", "start"]

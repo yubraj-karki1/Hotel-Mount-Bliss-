@@ -1,4 +1,5 @@
 import type { ErrorRequestHandler, RequestHandler } from "express";
+import multer from "multer";
 import { env } from "../config/env.js";
 import { logger } from "../config/logger.js";
 import { AppError } from "../utils/app-error.js";
@@ -8,6 +9,10 @@ export const errorHandler: ErrorRequestHandler = (error: unknown, req, res, _nex
   let status = error instanceof AppError ? error.statusCode : 500;
   let message = error instanceof Error ? error.message : "Internal server error";
   let errors = error instanceof AppError ? error.errors : [];
+  if (error instanceof multer.MulterError) {
+    status = 422;
+    message = error.code === "LIMIT_FILE_SIZE" ? "Each room photo must be 5 MB or smaller." : error.code === "LIMIT_FILE_COUNT" || error.code === "LIMIT_UNEXPECTED_FILE" ? "You can upload up to 8 room photos." : "Room photo upload failed.";
+  }
   if ((error as { code?: number }).code === 11000) { status = 409; message = "A record with that value already exists"; }
   if (status >= 500) logger.error({ err: error, requestId: req.id }, "Request failed");
   res.status(status).json({ success: false, message: status === 500 && env.NODE_ENV === "production" ? "Internal server error" : message, errors });

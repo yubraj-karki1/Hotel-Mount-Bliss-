@@ -9,7 +9,14 @@ const roomSchema = new Schema({
   price: { type: Number, required: true, min: 0 },
   status: { type: String, enum: ["AVAILABLE", "RESERVED", "OCCUPIED", "CLEANING", "MAINTENANCE", "OUT_OF_SERVICE"], default: "AVAILABLE", index: true },
   amenities: { type: [String], default: [] },
-  images: { type: [String], default: [] },
+  images: {
+    type: [String],
+    required: true,
+    validate: {
+      validator: (images: string[]) => Array.isArray(images) && images.length > 0 && images.every(Boolean),
+      message: "Please upload at least one room photo.",
+    },
+  },
   floor: { type: Number, required: true },
   isActive: { type: Boolean, default: true, index: true },
   bookingLockUntil: { type: Date, select: false },

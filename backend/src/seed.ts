@@ -14,9 +14,9 @@ try {
   } else logger.warn("SEED_ADMIN_EMAIL/SEED_ADMIN_PASSWORD not set; admin account was not seeded");
 
   const rooms = [
-    { name: "Standard Room", type: "Standard", description: "A comfortable room for one or two guests.", capacity: 2, bed: "Double bed", price: 1500, floor: 1, amenities: ["Wi-Fi", "Hot water", "Television"] },
-    { name: "Deluxe Room", type: "Deluxe", description: "A spacious room with mountain-facing ambience.", capacity: 2, bed: "Queen bed", price: 2500, floor: 2, amenities: ["Wi-Fi", "Hot water", "Television", "Breakfast"] },
-    { name: "Family Room", type: "Family", description: "Extra space for families and small groups.", capacity: 4, bed: "Queen bed and two singles", price: 3500, floor: 3, amenities: ["Wi-Fi", "Hot water", "Television", "Breakfast"] },
+    { name: "Standard Room", type: "Standard", description: "A comfortable room for one or two guests.", capacity: 2, bed: "Double bed", price: 1500, floor: 1, amenities: ["Wi-Fi", "Hot water", "Television"], images: ["/images/rooms/himalayan-room-representative.png"] },
+    { name: "Deluxe Room", type: "Deluxe", description: "A spacious room with mountain-facing ambience.", capacity: 2, bed: "Queen bed", price: 2500, floor: 2, amenities: ["Wi-Fi", "Hot water", "Television", "Breakfast"], images: ["/images/rooms/himalayan-room-representative.png"] },
+    { name: "Family Room", type: "Family", description: "Extra space for families and small groups.", capacity: 4, bed: "Queen bed and two singles", price: 3500, floor: 3, amenities: ["Wi-Fi", "Hot water", "Television", "Breakfast"], images: ["/images/rooms/himalayan-room-representative.png"] },
   ];
   for (const room of rooms) await Room.updateOne({ name: room.name }, { $setOnInsert: room }, { upsert: true });
   for (const service of [{ name: "Room Service", description: "Food and refreshments delivered to your room.", price: 300 }, { name: "Laundry", description: "Same-day laundry service.", price: 250 }, { name: "Breakfast", description: "Fresh daily breakfast.", price: 400 }, { name: "Airport Pickup", description: "Pre-arranged airport transfer.", price: 1800 }, { name: "Extra Bed", description: "Additional bed, subject to room capacity.", price: 700 }]) await HotelService.updateOne({ name: service.name }, { $setOnInsert: service }, { upsert: true });
