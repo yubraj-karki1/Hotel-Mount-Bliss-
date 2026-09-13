@@ -76,13 +76,13 @@ router.get("/rooms", asyncHandler(async (req, res) => {
   const filter: Record<string, unknown> = { isActive: true };
   if (req.query.type && req.query.type !== "any") filter.type = { $regex: `^${String(req.query.type).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" };
   if (req.query.status) filter.status = req.query.status;
-  if (req.query.bookable === "true") filter.status = { $nin: ["MAINTENANCE", "OUT_OF_SERVICE"] };
+  if (req.query.bookable === "true") filter.status = "AVAILABLE";
   if (req.query.guests) filter.capacity = { $gte: Math.max(1, Number(req.query.guests) || 1) };
   if (req.query.checkIn && req.query.checkOut) {
     const checkIn = new Date(String(req.query.checkIn)); const checkOut = new Date(String(req.query.checkOut));
     if (!Number.isFinite(checkIn.getTime()) || !Number.isFinite(checkOut.getTime()) || checkOut <= checkIn) throw new AppError(422, "Enter a valid check-in and check-out range");
     const conflicts = await Booking.distinct("room", { status: { $nin: ["CANCELLED", "CHECKED_OUT"] }, checkIn: { $lt: checkOut }, checkOut: { $gt: checkIn } });
-    filter._id = { $nin: conflicts }; filter.status = { $nin: ["MAINTENANCE", "OUT_OF_SERVICE"] };
+    filter._id = { $nin: conflicts }; filter.status = "AVAILABLE";
   }
   return success(res, 200, "Rooms fetched", await paged(Room, filter, req));
 }));
@@ -91,7 +91,7 @@ const stayQuery = z.object({ params: z.object({ id: objectId }), query: z.object
 router.get("/rooms/:id/alternatives", validate(stayQuery), asyncHandler(async (req, res) => {
   const requested = await Room.findById(req.params.id).lean(); if (!requested) throw new AppError(404, "Room not found");
   const conflicts = await Booking.distinct("room", { status: { $nin: ["CANCELLED", "CHECKED_OUT"] }, checkIn: { $lt: req.query.checkOut }, checkOut: { $gt: req.query.checkIn } });
-  const rooms = await Room.find({ _id: { $ne: requested._id, $nin: conflicts }, isActive: true, status: { $nin: ["MAINTENANCE", "OUT_OF_SERVICE"] }, capacity: { $gte: req.query.guests } }).sort({ price: 1 }).limit(4).lean();
+  const rooms = await Room.find({ _id: { $ne: requested._id, $nin: conflicts }, isActive: true, status: "AVAILABLE", capacity: { $gte: req.query.guests } }).sort({ price: 1 }).limit(4).lean();
   return success(res, 200, "Alternative rooms fetched", rooms);
 }));
 router.get("/settings/public", asyncHandler(async (_req, res) => success(res, 200, "Hotel settings fetched", await HotelSettings.findOne({ key: "primary" }).lean())));
@@ -115,7 +115,7 @@ const waitlistInput = z.object({ roomId: objectId, checkIn: z.coerce.date(), che
 router.post("/waitlist", guestBookingSensitive, validate(z.object({ body: waitlistInput })), asyncHandler(async (req, res) => {
   const room = await Room.findOne({ _id: req.body.roomId, isActive: true }); if (!room) throw new AppError(404, "Room not found"); if (req.body.guests > room.capacity) throw new AppError(422, "Guest count exceeds room capacity");
   const conflict = await Booking.exists({ room: room._id, status: { $nin: ["CANCELLED", "CHECKED_OUT"] }, checkIn: { $lt: req.body.checkOut }, checkOut: { $gt: req.body.checkIn } });
-  if (!["MAINTENANCE", "OUT_OF_SERVICE"].includes(room.status) && !conflict) throw new AppError(409, "This room is available for those dates; you can book it directly");
+  if (room.status === "AVAILABLE" && !conflict) throw new AppError(409, "This room is available for those dates; you can book it directly");
   const duplicate = await WaitlistEntry.exists({ room: room._id, email: req.body.email, checkIn: req.body.checkIn, checkOut: req.body.checkOut }); if (duplicate) throw new AppError(409, "You are already on this waitlist");
   const entry = await WaitlistEntry.create({ room: room._id, ...req.body, roomId: undefined });
   return success(res, 201, "You have joined the waitlist", { id: entry._id, status: entry.status });
@@ -128,7 +128,7 @@ async function quoteBooking(input: z.infer<typeof bookingInput>) {
   if (!Number.isFinite(checkIn.getTime()) || !Number.isFinite(checkOut.getTime()) || checkOut <= checkIn) {
     throw new AppError(422, "Enter a valid check-in and check-out range");
   }
-  const room = await Room.findOne({ _id: input.roomId, isActive: true, status: { $nin: ["MAINTENANCE", "OUT_OF_SERVICE"] } });
+  const room = await Room.findOne({ _id: input.roomId, isActive: true, status: "AVAILABLE" });
   if (!room) throw new AppError(409, "Room is operationally unavailable");
   if (input.guests > Number(room.capacity)) throw new AppError(422, "Guest count exceeds room capacity");
   const conflict = await Booking.exists({ room: room._id, status: { $nin: ["CANCELLED", "CHECKED_OUT"] }, checkIn: { $lt: checkOut }, checkOut: { $gt: checkIn } });
@@ -145,7 +145,7 @@ async function quoteBooking(input: z.infer<typeof bookingInput>) {
 router.post("/bookings/quote", validate(z.object({ body: bookingInput })), asyncHandler(async (req, res) => { const value = await quoteBooking(req.body); return success(res, 200, "Booking quote calculated", { room: value.room, nights: value.nights, roomTotal: value.roomTotal, addOnTotal: value.addOnTotal, totalAmount: value.totalAmount }); }));
 router.post("/bookings", optionalAuthenticate, validate(z.object({ body: bookingInput })), asyncHandler(async (req, res) => {
   const now = new Date(); const lockUntil = new Date(now.getTime() + 15_000);
-  const locked = await Room.findOneAndUpdate({ _id: req.body.roomId, isActive: true, status: { $nin: ["MAINTENANCE", "OUT_OF_SERVICE"] }, $or: [{ bookingLockUntil: { $exists: false } }, { bookingLockUntil: { $lt: now } }] }, { bookingLockUntil: lockUntil }, { new: true });
+  const locked = await Room.findOneAndUpdate({ _id: req.body.roomId, isActive: true, status: "AVAILABLE", $or: [{ bookingLockUntil: { $exists: false } }, { bookingLockUntil: { $lt: now } }] }, { bookingLockUntil: lockUntil }, { new: true });
   if (!locked) throw new AppError(409, "Another guest is booking this room; please try again");
   try {
     const value = await quoteBooking(req.body);

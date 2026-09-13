@@ -35,7 +35,7 @@ export function RoomsTable() {
 
   const rooms = useQuery({ queryKey: ["rooms"], queryFn: async () => (await roomApi.list({ pageSize: 100 })).data.data.items });
   const refresh = () => client.invalidateQueries({ queryKey: ["rooms"] });
-  const update = useMutation({ mutationFn: ({ id, status }: { id: string; status: RoomStatus }) => roomApi.update(id, { status }), onSuccess: refresh });
+  const update = useMutation({ mutationFn: ({ id, status }: { id: string; status: RoomStatus }) => roomApi.update(id, { status }), onSuccess: () => { refresh(); toast.success("Room status updated"); }, onError: () => toast.error("Room status could not be updated") });
   const remove = useMutation({ mutationFn: roomApi.remove, onSuccess: () => { refresh(); toast.success("Room archived"); } });
   const create = useMutation({
     mutationFn: async () => {

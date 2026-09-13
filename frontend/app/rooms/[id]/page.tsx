@@ -15,19 +15,20 @@ import { roomImageUrl } from "@/lib/room-image";
 
 export default function RoomDetails() {
   const id = String(useParams().id);
-  const q = useQuery({ queryKey: ["room", id], queryFn: async () => (await roomApi.detail(id)).data.data });
+  const q = useQuery({ queryKey: ["room", id], queryFn: async () => (await roomApi.detail(id)).data.data, refetchInterval: 15_000, refetchOnWindowFocus: true });
   if (q.isLoading) return <SiteShell><p className="mx-auto max-w-7xl p-10">Loading room…</p></SiteShell>;
   if (!q.data) return <SiteShell><p className="mx-auto max-w-7xl p-10 text-destructive">Room not found.</p></SiteShell>;
 
   const room = q.data;
-  const available = !["MAINTENANCE", "OUT_OF_SERVICE"].includes(room.status);
+  const available = room.status === "AVAILABLE";
+  const statusLabel = room.status.replaceAll("_", " ");
   return <SiteShell><section className="mx-auto max-w-7xl px-5 py-12 lg:px-8">
     <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
       <div>
         <div className="grid gap-3 sm:grid-cols-2">
           {room.images.map((photo, index) => <div key={photo} className={`relative overflow-hidden rounded-2xl bg-secondary ${index === 0 ? "aspect-[16/9] sm:col-span-2" : "aspect-[4/3]"}`}><Image src={roomImageUrl(photo)} alt={`${room.name} photo ${index + 1}`} fill unoptimized priority={index === 0} sizes={index === 0 ? "(min-width: 1024px) 800px, 100vw" : "(min-width: 640px) 400px, 100vw"} className="object-cover" /></div>)}
         </div>
-        <Badge className="mt-8" variant={available ? "accent" : "destructive"}>{available ? room.type : "Booked"}</Badge>
+        <Badge className="mt-8" variant={available ? "accent" : "destructive"}>{available ? room.type : statusLabel}</Badge>
         <h1 className="mt-3 font-serif text-5xl text-primary">{room.name}</h1>
         <p className="mt-6 leading-8 text-muted-foreground">{room.description}</p>
         <h2 className="mt-10 font-serif text-3xl text-primary">Room details</h2>

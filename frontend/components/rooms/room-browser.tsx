@@ -15,7 +15,7 @@ export function RoomBrowser({ initialFilters = {} }: { initialFilters?: Availabi
   const [sort, setSort] = useState("recommended");
   const hasAvailabilitySearch = Boolean(initialFilters.checkIn || initialFilters.checkOut || initialFilters.guests || (initialFilters.type && initialFilters.type !== "any"));
   const roomParams = { ...(initialFilters.type && initialFilters.type !== "any" ? { type: initialFilters.type } : {}), ...(hasAvailabilitySearch ? { bookable: "true", ...(initialFilters.checkIn ? { checkIn: initialFilters.checkIn } : {}), ...(initialFilters.checkOut ? { checkOut: initialFilters.checkOut } : {}), ...(initialFilters.guests ? { guests: initialFilters.guests } : {}) } : {}) };
-  const { data, isLoading, isError, refetch } = useQuery({ queryKey:["rooms","public",roomParams], queryFn: async()=> (await roomApi.list(roomParams)).data.data.items });
+  const { data, isLoading, isError, refetch } = useQuery({ queryKey:["rooms","public",roomParams], queryFn: async()=> (await roomApi.list(roomParams)).data.data.items, refetchInterval: 15_000, refetchOnWindowFocus: true });
 
   const filteredRooms = useMemo(() => {
     const requestedGuests = Number(initialFilters.guests) || 0;
