@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Sparkles } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import { bookingApi } from "@/services/booking-api";
 import { roomApi } from "@/services/room-api";
@@ -22,7 +22,12 @@ export function BookingFlow() {
   const [created, setCreated] = useState<{ reference: string; totalAmount: number } | null>(null);
   const [waitlisted, setWaitlisted] = useState(false);
   const rooms = useQuery({ queryKey: ["rooms", "booking"], queryFn: async () => (await roomApi.list()).data.data.items, refetchInterval: 15_000, refetchOnWindowFocus: true });
-  const services = useQuery({ queryKey: ["services"], queryFn: async () => (await serviceApi.list()).data.data });
+  const services = useQuery({ queryKey: ["services", "public"], queryFn: async () => (await serviceApi.list()).data.data, refetchInterval: 30_000, refetchOnWindowFocus: true });
+  useEffect(() => {
+    if (!services.data) return;
+    const activeIds = new Set(services.data.map(service => service._id));
+    setForm(current => ({ ...current, addOnIds: current.addOnIds.filter(id => activeIds.has(id)) }));
+  }, [services.data]);
   const selectedRoom = rooms.data?.find(room => room._id === form.roomId);
   const selectedRoomBookable = selectedRoom?.status === "AVAILABLE";
   const stayReady = Boolean(form.roomId && form.checkIn && form.checkOut && form.checkOut > form.checkIn);
